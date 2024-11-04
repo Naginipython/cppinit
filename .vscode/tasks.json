@@ -4,14 +4,13 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "zig",
-            "args": [
-                "build"
-            ],
+            "command": "make",
+            "args": [],
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
+            "problemMatcher": ["$gcc"]
         }
     ]
 }

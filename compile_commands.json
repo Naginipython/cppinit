@@ -1,0 +1,17 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-Iinclude",
+      "-Wall",
+      "-g",
+      "-o",
+      "main",
+      "src/main.cpp"
+    ],
+    "directory": "/home/ben/Documents/templates/cpp",
+    "file": "/home/ben/Documents/templates/cpp/src/main.cpp",
+    "output": "/home/ben/Documents/templates/cpp/main"
+  }
+]
