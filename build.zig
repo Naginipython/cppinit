@@ -13,7 +13,9 @@ fn linker(exe: *std.Build.Step.Compile, files: []const []const u8, b: *std.Build
     if (target.query.isNativeOs() and target.result.os.tag == .windows) {
         // todo
     } else {
-        // exe.linkSystemLibrary("SDL2"); // Add libs as needed
+        exe.linkSystemLibrary("SDL2"); // Add libs as needed
+        exe.linkSystemLibrary("SDL2_image");
+        exe.linkSystemLibrary("glew");
     }
 }
 
@@ -21,9 +23,10 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const files = try findFiles("src");
+    const files = try findFiles("src", &[_][]const u8{});
     std.debug.print("Files built:\n{s}\n", .{files});
 
+    // TODO: addSharedLibrary
     const exe = b.addExecutable(.{ .name = "main", .target = target });
     linker(exe, files, b, target);
 
@@ -40,7 +43,7 @@ pub fn build(b: *std.Build) !void {
     run_step.dependOn(&run_cmd.step);
 
     // ------ Tests ------
-    const test_files = try findFiles("tests");
+    const test_files = try findFiles("tests", &[_][]const u8{});
     var files_lst = std.ArrayList([]const u8).init(std.heap.page_allocator);
     for (files) |f|
         if (!std.mem.eql(u8, f, "src/main.cpp"))
@@ -73,7 +76,8 @@ pub fn build(b: *std.Build) !void {
     clean_step.dependOn(&b.addRemoveDirTree(b.pathFromRoot(".zig-cache")).step);
 }
 
-fn findFiles(src: []const u8) ![]const []const u8 {
+// TODO: Add ignore word
+fn findFiles(src: []const u8, ignore_list: []const []const u8) ![]const []const u8 {
     var result = std.ArrayList([]const u8).init(std.heap.page_allocator);
     // todo: error handling for root (for test dir)
     var root = try std.fs.cwd().openDir(src, .{ .iterate = true });
@@ -81,6 +85,18 @@ fn findFiles(src: []const u8) ![]const []const u8 {
 
     var iter = root.iterate();
     while (try iter.next()) |entry| {
+        // ignore if on ignore list
+        var ignore = false;
+        for (ignore_list) |item|
+            if (std.mem.indexOf(u8, entry.name, item) != null) {
+                ignore = true;
+                break;
+            };
+        if (ignore) {
+            continue;
+        }
+
+        // Create item
         var item = std.ArrayList(u8).init(std.heap.page_allocator);
         try item.appendSlice(src);
         try item.append('/');
@@ -95,7 +111,7 @@ fn findFiles(src: []const u8) ![]const []const u8 {
         }
         if (entry.kind == .directory) {
             const dir_u8 = try item.toOwnedSlice();
-            const files = try findFiles(dir_u8);
+            const files = try findFiles(dir_u8, ignore_list);
             for (files) |f|
                 try result.append(f);
         }
