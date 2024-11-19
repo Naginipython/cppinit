@@ -14,10 +14,10 @@ fn linker(exe: *std.Build.Step.Compile, files: []const []const u8, b: *std.Build
     // Libs
     if (target.query.isNativeOs() and target.result.os.tag == .windows) {
         // Solution 1
-        const sdl_dep = b.dependency("SDL", .{
-            .target = target,
-        });
-        exe.linkLibrary(sdl_dep.artifact("SDL2"));
+        // const sdl_dep = b.dependency("SDL", .{ // Add libs as needed
+        //     .target = target,
+        // });
+        // exe.linkLibrary(sdl_dep.artifact("SDL2"));
 
         // Solution 2 -WIP-
         // This worked in the past?
@@ -26,7 +26,7 @@ fn linker(exe: *std.Build.Step.Compile, files: []const []const u8, b: *std.Build
         // b.installBinFile("lib/SDL2/lib/x64/SDL2.dll", "SDL2.dll");
         // exe.linkSystemLibrary("SDL2");
     } else {
-        exe.linkSystemLibrary("SDL2"); // Add libs as needed
+        // exe.linkSystemLibrary("SDL2"); // Add libs as needed
     }
 }
 
