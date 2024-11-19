@@ -87,8 +87,12 @@ pub fn build(b: *std.Build) !void {
 
     // ------ Clean ------
     const clean_step = b.step("clean", "Clean the directory");
-    clean_step.dependOn(&b.addRemoveDirTree(b.path("zig-out")).step);
-    clean_step.dependOn(&b.addRemoveDirTree(b.path(".zig-cache")).step);
+    // Windows
+    // clean_step.dependOn(&b.addRemoveDirTree(b.path("zig-out")).step);
+    // clean_step.dependOn(&b.addRemoveDirTree(b.path(".zig-cache")).step);
+    // Linux
+    clean_step.dependOn(&b.addRemoveDirTree(b.install_path).step);
+    clean_step.dependOn(&b.addRemoveDirTree(b.pathFromRoot(".zig-cache")).step);
 }
 
 // TODO: Add ignore word
