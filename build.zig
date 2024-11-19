@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const PROGRAM_NAME: []const u8 = "main";
+
 fn linker(exe: *std.Build.Step.Compile, files: []const []const u8, b: *std.Build, target: std.Build.ResolvedTarget) void {
     exe.addCSourceFiles(.{
         .files = files,
@@ -11,30 +13,38 @@ fn linker(exe: *std.Build.Step.Compile, files: []const []const u8, b: *std.Build
 
     // Libs
     if (target.query.isNativeOs() and target.result.os.tag == .windows) {
-        // todo
+        // Solution 1
+        const sdl_dep = b.dependency("SDL", .{
+            .target = target,
+        });
+        exe.linkLibrary(sdl_dep.artifact("SDL2"));
+
+        // Solution 2 -WIP-
+        // This worked in the past?
+        // exe.addIncludePath(b.path("lib/SDL2/include/"));
+        // exe.addLibraryPath(b.path("lib/SDL2/lib/x64/SDL2.lib"));
+        // b.installBinFile("lib/SDL2/lib/x64/SDL2.dll", "SDL2.dll");
+        // exe.linkSystemLibrary("SDL2");
     } else {
         exe.linkSystemLibrary("SDL2"); // Add libs as needed
-        exe.linkSystemLibrary("SDL2_image");
-        exe.linkSystemLibrary("glew");
     }
 }
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
 
     const files = try findFiles("src", &[_][]const u8{});
     std.debug.print("Files built:\n{s}\n", .{files});
 
-    // TODO: addSharedLibrary
-    const exe = b.addExecutable(.{ .name = "main", .target = target });
+    const exe = b.addExecutable(.{ .name = PROGRAM_NAME, .target = target });
     linker(exe, files, b, target);
 
     b.installArtifact(exe);
+
+    // ------ Run ------
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
 
-    // ------ Run ------
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
@@ -43,37 +53,42 @@ pub fn build(b: *std.Build) !void {
     run_step.dependOn(&run_cmd.step);
 
     // ------ Tests ------
-    const test_files = try findFiles("tests", &[_][]const u8{});
-    var files_lst = std.ArrayList([]const u8).init(std.heap.page_allocator);
-    for (files) |f|
-        if (!std.mem.eql(u8, f, "src/main.cpp"))
-            try files_lst.append(f);
-    try files_lst.appendSlice(test_files);
-    const full_test_files = try files_lst.toOwnedSlice();
-    std.debug.print("Test Files built:\n{s}\n", .{full_test_files});
+    var test_dir_exists = false;
+    _ = std.fs.cwd().statFile("tests") catch |err| {
+        // std.debug.print("{?}\n", .{err});
+        if (err == error.IsDir) {
+            test_dir_exists = true;
+        }
+    };
+    
+    if (test_dir_exists) {
+        const test_files = try findFiles("tests", &[_][]const u8{"main.cpp"});
+        std.debug.print("Test Files built:\n{s}\n", .{test_files});
 
-    // combine with `files`, except src/main.c or src/main.cpp
-    const tests_exe = b.addExecutable(.{ .name = "tests", .target = target });
+        // combine with `files`, except src/main.c or src/main.cpp
+        const tests_name = PROGRAM_NAME ++ "_tests";
+        const tests_exe = b.addExecutable(.{ .name = tests_name, .target = target });
 
-    linker(tests_exe, full_test_files, b, target);
-    const googletest_dep = b.dependency("googletest", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    tests_exe.linkLibrary(googletest_dep.artifact("gtest"));
+        linker(tests_exe, test_files, b, target);
+        const googletest_dep = b.dependency("googletest", .{
+            .target = target,
+            // .optimize = b.standardOptimizeOption(.{}),
+        });
+        tests_exe.linkLibrary(googletest_dep.artifact("gtest"));
 
-    b.installArtifact(tests_exe);
+        b.installArtifact(tests_exe);
 
-    const run_tests_exe = b.addRunArtifact(tests_exe);
-    run_tests_exe.step.dependOn(b.getInstallStep());
+        const run_tests_exe = b.addRunArtifact(tests_exe);
+        run_tests_exe.step.dependOn(b.getInstallStep());
 
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_tests_exe.step);
+        const test_step = b.step("test", "Run unit tests");
+        test_step.dependOn(&run_tests_exe.step);
+    }
 
     // ------ Clean ------
     const clean_step = b.step("clean", "Clean the directory");
-    clean_step.dependOn(&b.addRemoveDirTree(b.install_path).step);
-    clean_step.dependOn(&b.addRemoveDirTree(b.pathFromRoot(".zig-cache")).step);
+    clean_step.dependOn(&b.addRemoveDirTree(b.path("zig-out")).step);
+    clean_step.dependOn(&b.addRemoveDirTree(b.path(".zig-cache")).step);
 }
 
 // TODO: Add ignore word
