@@ -13,4 +13,4 @@ TODO:
 - [ ] Program name global variable
 - [x] Optional `tests/` directory
 - [x] `main.cpp` optionally can be program name?
-- [ ] Explain how to add packages, with windows
+- [x] Explain how to add packages, with windows
