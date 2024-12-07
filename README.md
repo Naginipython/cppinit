@@ -8,9 +8,11 @@ To add packages to `build.zig.zon`, I basically found the github repo of the lib
 
 TODO:
 - [x] Windows build with package management
-- [ ] Windows build with lib
-- [ ] Windows build with dll
-- [ ] Program name global variable
+- [x] Windows build with lib
+- [x] Windows build with dll
+- [x] Program name global variable
 - [x] Optional `tests/` directory
 - [x] `main.cpp` optionally can be program name?
 - [x] Explain how to add packages, with windows
+- [ ] Script to easily add libs?
+- [ ] Hot Reload example/ready code
