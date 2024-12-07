@@ -19,12 +19,13 @@ fn linker(exe: *std.Build.Step.Compile, files: []const []const u8, b: *std.Build
         // });
         // exe.linkLibrary(sdl_dep.artifact("SDL2"));
 
-        // Solution 2 -WIP-
-        // This worked in the past?
-        // exe.addIncludePath(b.path("lib/SDL2/include/"));
-        // exe.addLibraryPath(b.path("lib/SDL2/lib/x64/SDL2.lib"));
-        // b.installBinFile("lib/SDL2/lib/x64/SDL2.dll", "SDL2.dll");
-        // exe.linkSystemLibrary("SDL2");
+        // Solution 2 (make sure you place all files in the directory, not just the lib files (unless you know what you're doing))
+        // exe.addLibraryPath(b.path("lib/SDL3-3.1.6/lib/x64/"));
+        // exe.linkSystemLibrary("SDL3");
+        // b.installBinFile("lib/SDL3-3.1.6/lib/x64/SDL3.dll", "SDL3.dll");
+
+        // Solution 3: Dynamic Library? -WIP-
+        // b.installBinFile("lib/SDL3-3.1.6/lib/x64/SDL3.dll", "SDL3.dll");
     } else {
         // exe.linkSystemLibrary("SDL2"); // Add libs as needed
     }
@@ -87,12 +88,12 @@ pub fn build(b: *std.Build) !void {
 
     // ------ Clean ------
     const clean_step = b.step("clean", "Clean the directory");
-    // Windows
-    // clean_step.dependOn(&b.addRemoveDirTree(b.path("zig-out")).step);
-    // clean_step.dependOn(&b.addRemoveDirTree(b.path(".zig-cache")).step);
+    // Windows (doesn't work without admin permission)
+    clean_step.dependOn(&b.addRemoveDirTree(b.path("zig-out")).step);
+    clean_step.dependOn(&b.addRemoveDirTree(b.path(".zig-cache")).step);
     // Linux
-    clean_step.dependOn(&b.addRemoveDirTree(b.install_path).step);
-    clean_step.dependOn(&b.addRemoveDirTree(b.pathFromRoot(".zig-cache")).step);
+    // clean_step.dependOn(&b.addRemoveDirTree(b.install_path).step);
+    // clean_step.dependOn(&b.addRemoveDirTree(b.pathFromRoot(".zig-cache")).step);
 }
 
 // TODO: Add ignore word
