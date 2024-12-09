@@ -1,3 +1,8 @@
+# Ignore some of .vscode files
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+
 # Zig
 zig-out/
 .zig-cache/
