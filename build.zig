@@ -54,16 +54,12 @@ pub fn build(b: *std.Build) !void {
     run_step.dependOn(&run_cmd.step);
 
     // ------ Tests ------
-    var test_dir_exists = false;
-    _ = std.fs.cwd().statFile("tests") catch |err| {
-        // std.debug.print("{?}\n", .{err});
-        if (err == error.IsDir) {
-            test_dir_exists = true;
-        }
-    };
-    
-    if (test_dir_exists) {
-        const test_files = try findFiles("tests", &[_][]const u8{"main.cpp"});
+    if (try testDirExists()) {
+        const test_files1 = try findFiles("tests", &[_][]const u8{});
+        const test_files2 = try findFiles("src", &[_][]const u8{"main.cpp"});
+
+        // Combine the test files with the src files
+        const test_files = try combineArrays(test_files1, test_files2);
         std.debug.print("Test Files built:\n{s}\n", .{test_files});
 
         // combine with `files`, except src/main.c or src/main.cpp
@@ -96,28 +92,43 @@ pub fn build(b: *std.Build) !void {
     clean_step.dependOn(&b.addRemoveDirTree(b.pathFromRoot(".zig-cache")).step);
 }
 
-// TODO: Add ignore word
+fn testDirExists() !bool {
+    const checkDirs = try std.fs.cwd().openDir(".", .{ .iterate = true });
+    var iter = checkDirs.iterate();
+    while (try iter.next()) |entry| {
+        if (std.mem.eql(u8, entry.name,"tests") and entry.kind == .directory) {
+            return true;
+        }
+    }
+    return false;
+}
+
+fn combineArrays(arr1: []const []const u8, arr2: []const []const u8) ![]const []const u8 {
+    var combined = std.ArrayList([]const u8).init(std.heap.page_allocator);
+    defer combined.deinit();
+    for (arr1) |item|
+        try combined.append(item);
+    for (arr2) |item|
+        try combined.append(item);
+    return try combined.toOwnedSlice();
+}
+
 fn findFiles(src: []const u8, ignore_list: []const []const u8) ![]const []const u8 {
     var result = std.ArrayList([]const u8).init(std.heap.page_allocator);
-    // todo: error handling for root (for test dir)
+    defer result.deinit();
     var root = try std.fs.cwd().openDir(src, .{ .iterate = true });
     defer root.close();
 
     var iter = root.iterate();
-    while (try iter.next()) |entry| {
+    main: while (try iter.next()) |entry| {
         // ignore if on ignore list
-        var ignore = false;
         for (ignore_list) |item|
-            if (std.mem.indexOf(u8, entry.name, item) != null) {
-                ignore = true;
-                break;
-            };
-        if (ignore) {
-            continue;
-        }
+            if (std.mem.indexOf(u8, entry.name, item) != null)
+                continue :main;
 
         // Create item
         var item = std.ArrayList(u8).init(std.heap.page_allocator);
+        defer item.deinit();
         try item.appendSlice(src);
         try item.append('/');
         try item.appendSlice(entry.name);
@@ -129,6 +140,7 @@ fn findFiles(src: []const u8, ignore_list: []const []const u8) ![]const []const 
                 try result.append(path_u8);
             }
         }
+        // Recusively search for files in directories
         if (entry.kind == .directory) {
             const dir_u8 = try item.toOwnedSlice();
             const files = try findFiles(dir_u8, ignore_list);
@@ -136,6 +148,5 @@ fn findFiles(src: []const u8, ignore_list: []const []const u8) ![]const []const 
                 try result.append(f);
         }
     }
-    const res = try result.toOwnedSlice();
-    return res;
+    return try result.toOwnedSlice();
 }
